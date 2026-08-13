@@ -13,8 +13,10 @@ import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -112,13 +114,14 @@ public class MainhandTrigger extends Module {
     }
 
     private boolean pressYes() {
-        Screen screen = mc.screen;
+        Screen screen = mc.gui.screen();
         if (screen == null) return false;
 
         for (var child : screen.children()) {
             if (child instanceof Button button
                 && button.getMessage().getString().equalsIgnoreCase("Yes")) {
-                button.onPress();
+                // onPress now takes an InputWithModifiers; KeyEvent is one, so we synthesize an Enter press.
+                button.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_ENTER, 0));
                 return true;
             }
         }

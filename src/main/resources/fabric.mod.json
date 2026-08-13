@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "addon-template",
   "version": "${version}",
-  "name": "Mainhand Trigger",
+  "name": "AutoSeller",
   "description": "Fires a server command when a whitelisted mainhand item reaches a minimum count. Made by CardBerry.",
   "authors": [
     "CardBerry"

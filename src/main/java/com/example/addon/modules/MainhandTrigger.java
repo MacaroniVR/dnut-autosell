@@ -19,6 +19,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainhandTrigger extends Module {
@@ -145,15 +146,32 @@ public class MainhandTrigger extends Module {
         Screen screen = mc.gui.screen();
         if (screen == null) return false;
 
+        // Collect the screen's buttons in order. Confirm screens lay these out as [No, Yes],
+        // so the second button is Yes. This avoids matching on the label text, which can carry
+        // color/formatting that breaks a plain "Yes" string comparison.
+        List<Button> buttons = new ArrayList<>();
         for (var child : screen.children()) {
-            if (child instanceof Button button
-                && button.getMessage().getString().equalsIgnoreCase("Yes")) {
-                // onPress now takes an InputWithModifiers; KeyEvent is one, so we synthesize an Enter press.
-                button.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_ENTER, 0));
-                return true;
+            if (child instanceof Button button) buttons.add(button);
+        }
+        if (buttons.isEmpty()) return false;
+
+        KeyEvent enter = new KeyEvent(GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_ENTER, 0);
+
+        // Prefer the button whose visible text contains "y" (Yes has one, No never does). This
+        // survives color/formatting on the label, which broke the earlier exact "Yes" match.
+        // If none matches, fall back to the second button, since confirm screens lay out [No, Yes].
+        Button target = null;
+        for (Button b : buttons) {
+            if (b.getMessage().getString().toLowerCase().contains("y")) {
+                target = b;
+                break;
             }
         }
-        return false;
+        if (target == null && buttons.size() >= 2) target = buttons.get(1);
+        if (target == null) return false;
+
+        target.onPress(enter);
+        return true;
     }
 
     private void fire(int count) {

@@ -9,6 +9,7 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.settings.StringSetting;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.components.Button;
@@ -54,6 +55,23 @@ public class MainhandTrigger extends Module {
         .build()
     );
 
+    private final Setting<Boolean> antiDetection = sgGeneral.add(new BoolSetting.Builder()
+        .name("anti-detection")
+        .description("Adds random timing jitter so fires aren't perfectly regular. Harder for automation detection to spot.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Integer> jitter = sgGeneral.add(new IntSetting.Builder()
+        .name("jitter")
+        .description("Max random ticks added to fire delay and cooldown when anti-detection is on.")
+        .defaultValue(10)
+        .min(1)
+        .sliderRange(1, 40)
+        .visible(antiDetection::get)
+        .build()
+    );
+
     private final Setting<Boolean> autoConfirm = sgGeneral.add(new BoolSetting.Builder()
         .name("auto-confirm")
         .description("After firing, watch for a Yes/No confirmation screen and press Yes.")
@@ -73,8 +91,11 @@ public class MainhandTrigger extends Module {
     // Ticks remaining before the command is allowed to fire again.
     private int cooldownTicks = 0;
 
+    // Random pre-fire delay (ticks) applied after the edge, when anti-detection is on.
+    private int fireDelay = 0;
+
     public MainhandTrigger() {
-        super(AddonTemplate.CATEGORY, "mainhand-trigger", "Fires a server command once when a whitelisted mainhand item reaches a minimum count.");
+        super(AddonTemplate.CATEGORY, "mainhand-trigger", "Fires a server command once when a whitelisted mainhand item reaches a minimum count. Made by CardBerry.");
     }
 
     @Override
@@ -83,6 +104,7 @@ public class MainhandTrigger extends Module {
         cooldownTicks = 0;
         pending = false;
         wasMet = false;
+        fireDelay = 0;
     }
 
     @EventHandler
@@ -90,6 +112,7 @@ public class MainhandTrigger extends Module {
         if (mc.player == null) return;
 
         if (cooldownTicks > 0) cooldownTicks--;
+        if (fireDelay > 0) fireDelay--;
 
         ItemStack stack = mc.player.getMainHandItem();
         boolean conditionMet = !stack.isEmpty()
@@ -97,13 +120,18 @@ public class MainhandTrigger extends Module {
             && stack.getCount() >= minAmount.get();
 
         // Edge: only request a fire on the false->true flip, not every tick it stays held.
-        if (conditionMet && !wasMet) pending = true;
+        if (conditionMet && !wasMet) {
+            pending = true;
+            // Randomized pre-fire delay so the command doesn't fire the same tick the condition flips.
+            fireDelay = antiDetection.get() ? Utils.random(0, jitter.get() + 1) : 0;
+        }
         wasMet = conditionMet;
 
-        // Fire the single pending request once the cooldown is clear.
-        if (pending && cooldownTicks == 0) {
+        // Fire the single pending request once both the cooldown and the jitter delay have cleared.
+        if (pending && cooldownTicks == 0 && fireDelay == 0) {
             fire(stack.getCount());
-            cooldownTicks = cooldown.get();
+            // Base cooldown plus random padding, so the interval between fires isn't perfectly regular.
+            cooldownTicks = cooldown.get() + (antiDetection.get() ? Utils.random(0, jitter.get() + 1) : 0);
             pending = false;
         }
 

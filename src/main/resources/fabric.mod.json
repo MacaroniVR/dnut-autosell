@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "addon-template",
   "version": "${version}",
-  "name": "Addon Template",
-  "description": "An addon template for Meteor Client addons.",
+  "name": "Mainhand Trigger",
+  "description": "Fires a server command when a whitelisted mainhand item reaches a minimum count. Made by CardBerry.",
   "authors": [
-    "seasnail"
+    "CardBerry"
   ],
   "contact": {
     "sources": "https://github.com/MeteorDevelopment/meteor-addon-template"
